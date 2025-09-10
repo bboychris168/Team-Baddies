@@ -42,7 +42,7 @@ def load_data():
             ],
             "layout_settings": {
                 "rows": 3, "cols": 4, "center_name": "Team Baddies Badminton Center",
-                "total_courts": 6
+                "image_width": 1200, "image_height": 800, "court_style": "modern"
             }
         }
     
