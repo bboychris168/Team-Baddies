@@ -2,8 +2,6 @@ import streamlit as st
 import json
 from datetime import datetime
 import pandas as pd
-import hashlib
-import uuid
 
 # Set up page config
 st.set_page_config(page_title="Team Baddies", page_icon="🏸", layout="wide")
@@ -61,6 +59,13 @@ except FileNotFoundError:
             {"id": 6, "level": "advanced", "name": "Court 6"}
         ]
     }
+
+try:
+    with open("audit_trail.json", "r") as file:
+        audit_trail = json.load(file)
+except FileNotFoundError:
+    audit_trail = []
+
 # Apply custom CSS for styling
 st.markdown("""
 <style>
@@ -136,7 +141,11 @@ st.markdown("""
         border-radius: 10px;
         padding: 2rem;
     }
-    /* Custom button styles */
+    .counter {
+        font-weight: bold;
+        font-size: 18px;
+        color: #0d6efd;
+    }
     .stButton>button {
         background-color: #0d6efd;
         color: white;
@@ -150,47 +159,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
-
-# Title
-st.markdown("<h1 class='title'>🏸 Team Baddies</h1>", unsafe_allow_html=True)
-st.markdown("<h2 class='subheader'>Badminton Roster Management</h2>", unsafe_allow_html=True)
-
-# Helper functions
-def save_data():
-    with open("player_list.json", "w") as file:
-        json.dump(player_list, file, indent=4)
-    with open("audit_trail.json", "w") as file:
-        json.dump(audit_trail, file, indent=4)
-    with open("court_layout.json", "w") as file:
-        json.dump(court_layout, file, indent=4)
-
-def verify_password(password):
-    # In production, use proper password hashing
-    return password == ADMIN_PASSWORD
-
-def add_audit_log(action, details, user_type="user"):
-    audit_trail.append({
-        "action": action,
-        "details": details,
-        "user_type": user_type,
-        "timestamp": datetime.now().isoformat()
-    })
-
-# Load existing player list or initialize a new one
-try:
-    with open("player_list.json", "r") as file:
-        player_list = json.load(file)
-except FileNotFoundError:
-    player_list = {"Monday": {"Players": [], "Waitlist": []},
-                   "Tuesday": {"Players": [], "Waitlist": []},
-                   "Thursday": {"Players": [], "Waitlist": []}}
-
-# Load audit trail or initialize a new one
-try:
-    with open("audit_trail.json", "r") as file:
-        audit_trail = json.load(file)
-except FileNotFoundError:
-    audit_trail = []
 
 # Sidebar navigation
 st.sidebar.markdown("## Navigation")
@@ -211,12 +179,13 @@ with st.sidebar:
             if verify_password(admin_password):
                 st.session_state.admin_logged_in = True
                 st.success("Successfully logged in as admin!")
+                st.rerun()
             else:
                 st.error("Incorrect password!")
     else:
         if st.button("Logout"):
             st.session_state.admin_logged_in = False
-            st.experimental_rerun()
+            st.rerun()
 
 # Main content area
 st.markdown("<h1 class='header'>🏸 Team Baddies</h1>", unsafe_allow_html=True)
@@ -295,6 +264,7 @@ if page == "Home":
                 
                 add_audit_log("Added", f"{new_player} ({skill_level}) - {day}")
                 save_data()
+                st.rerun()
             else:
                 st.error("Please enter a name.")
         
@@ -313,6 +283,7 @@ if page == "Home":
                     st.success(f"Removed {remove_player}")
                     add_audit_log("Removed", f"{remove_player} from {day} list")
                     save_data()
+                    st.rerun()
         
         # Remove from waitlist
         if waitlist:
@@ -327,10 +298,10 @@ if page == "Home":
                     st.success(f"Removed {remove_waitlist}")
                     add_audit_log("Removed", f"{remove_waitlist} from {day} waitlist")
                     save_data()
+                    st.rerun()
         
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Court Layout Page
 elif page == "Court Layout":
     if not st.session_state.admin_logged_in:
         st.warning("Please log in as admin to access the court layout settings.")
@@ -352,9 +323,9 @@ elif page == "Court Layout":
                 )
             with cols[2]:
                 new_name = st.text_input("Court Name", court["name"], key=f"name_{i}")
-                
-                court_layout["courts"][i]["level"] = new_level
-                court_layout["courts"][i]["name"] = new_name
+            
+            court_layout["courts"][i]["level"] = new_level
+            court_layout["courts"][i]["name"] = new_name
         
         if st.button("Save Court Layout"):
             save_data()
@@ -363,7 +334,6 @@ elif page == "Court Layout":
         
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Admin Panel Page
 elif page == "Admin Panel":
     if not st.session_state.admin_logged_in:
         st.warning("Please log in as admin to access the admin panel.")
@@ -373,13 +343,16 @@ elif page == "Admin Panel":
         
         # Audit Trail
         st.markdown("<h3>Audit Trail</h3>", unsafe_allow_html=True)
-        audit_df = pd.DataFrame(audit_trail)
-        st.dataframe(audit_df, use_container_width=True)
+        if audit_trail:
+            audit_df = pd.DataFrame(audit_trail)
+            st.dataframe(audit_df, use_container_width=True)
+        else:
+            st.info("No audit records available.")
         
         # Player Statistics
         st.markdown("<h3>Player Statistics</h3>", unsafe_allow_html=True)
-        total_players = sum(len(player_list[day]["Players"]) for day in player_list)
-        total_waitlist = sum(len(player_list[day]["Waitlist"]) for day in player_list)
+        total_players = sum(len(player_list[day_key]["Players"]) for day_key in player_list)
+        total_waitlist = sum(len(player_list[day_key]["Waitlist"]) for day_key in player_list)
         
         cols = st.columns(3)
         cols[0].metric("Total Active Players", total_players)
@@ -389,7 +362,11 @@ elif page == "Admin Panel":
         # Export Data
         st.markdown("<h3>Export Data</h3>", unsafe_allow_html=True)
         if st.button("Download Audit Trail CSV"):
-            audit_df.to_csv("audit_trail_export.csv", index=False)
-            st.success("Audit trail exported to audit_trail_export.csv")
+            if audit_trail:
+                audit_df = pd.DataFrame(audit_trail)
+                audit_df.to_csv("audit_trail_export.csv", index=False)
+                st.success("Audit trail exported to audit_trail_export.csv")
+            else:
+                st.warning("No audit data to export.")
         
         st.markdown("</div>", unsafe_allow_html=True)
