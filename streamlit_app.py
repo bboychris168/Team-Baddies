@@ -772,7 +772,6 @@ elif page == "Court Layout":
         st.warning("🔒 Please log in as admin to access the court layout settings.")
         st.info("💡 Use the admin login in the sidebar to continue.")
     else:
-        st.markdown("    else:
         st.markdown("<h2 style='text-align: center; color: #0d6efd; margin-bottom: 2rem;'>🏸 Court Layout Designer</h2>", unsafe_allow_html=True)
         
         # Layout Settings Section
