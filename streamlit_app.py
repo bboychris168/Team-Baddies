@@ -5,7 +5,38 @@ import pandas as pd
 import hashlib
 import uuid
 
-# Set up pag# Load existing player list or initialize a new one
+# Set up page config
+st.set_page_config(page_title="Team Baddies", page_icon="🏸", layout="wide")
+
+# Initialize session state for admin login
+if 'admin_logged_in' not in st.session_state:
+    st.session_state.admin_logged_in = False
+
+# Admin credentials (in production, use environment variables or secure storage)
+ADMIN_PASSWORD = "admin123"  # This should be hashed in production
+
+# Helper functions
+def save_data():
+    with open("player_list.json", "w") as file:
+        json.dump(player_list, file, indent=4)
+    with open("audit_trail.json", "w") as file:
+        json.dump(audit_trail, file, indent=4)
+    with open("court_layout.json", "w") as file:
+        json.dump(court_layout, file, indent=4)
+
+def verify_password(password):
+    # In production, use proper password hashing
+    return password == ADMIN_PASSWORD
+
+def add_audit_log(action, details, user_type="user"):
+    audit_trail.append({
+        "action": action,
+        "details": details,
+        "user_type": user_type,
+        "timestamp": datetime.now().isoformat()
+    })
+
+# Load data
 try:
     with open("player_list.json", "r") as file:
         player_list = json.load(file)
@@ -16,7 +47,6 @@ except FileNotFoundError:
         "Thursday": {"Players": [], "Waitlist": []}
     }
 
-# Load court layout or initialize a new one
 try:
     with open("court_layout.json", "r") as file:
         court_layout = json.load(file)
@@ -203,25 +233,30 @@ if page == "Home":
     # Create three columns: courts, player list, and input
     col1, col2, col3 = st.columns([2, 2, 1])
 
-# First column: Court Layout
-with col1:
-    st.markdown("<div class='card'><h3>Court Layout</h3>", unsafe_allow_html=True)
+# Home Page
+if page == "Home":
+    # Create three columns: courts, player list, and input
+    col1, col2, col3 = st.columns([2, 2, 1])
     
-    # Display courts in a grid
-    for i in range(0, len(court_layout["courts"]), 2):
-        cols = st.columns(2)
-        for j in range(2):
-            if i + j < len(court_layout["courts"]):
-                court = court_layout["courts"][i + j]
-                with cols[j]:
-                    st.markdown(
-                        f"<div class='court court-{court['level']}'>"
-                        f"<h4>{court['name']}</h4>"
-                        f"<p>{court['level'].title()} Level</p>"
-                        "</div>",
-                        unsafe_allow_html=True
-                    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    # First column: Court Layout
+    with col1:
+        st.markdown("<div class='card'><h3>Court Layout</h3>", unsafe_allow_html=True)
+        
+        # Display courts in a grid
+        for i in range(0, len(court_layout["courts"]), 2):
+            cols = st.columns(2)
+            for j in range(2):
+                if i + j < len(court_layout["courts"]):
+                    court = court_layout["courts"][i + j]
+                    with cols[j]:
+                        st.markdown(
+                            f"<div class='court court-{court['level']}'>"
+                            f"<h4>{court['name']}</h4>"
+                            f"<p>{court['level'].title()} Level</p>"
+                            "</div>",
+                            unsafe_allow_html=True
+                        )
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # Second column: Player Lists
 with col2:
