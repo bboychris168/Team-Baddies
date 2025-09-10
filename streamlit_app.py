@@ -254,8 +254,8 @@ if page == "Home":
                         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-# Second column: Player Lists
-with col2:
+    # Second column: Player Lists
+    with col2:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown(f"<h3>Players for {day}</h3>", unsafe_allow_html=True)
     
@@ -283,61 +283,61 @@ with col2:
     st.markdown(f"<p class='counter'>Waitlist Count: {len(waitlist)}/20</p>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Third column: Player Management
-with col3:
-    st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown("<h3>Add Player</h3>", unsafe_allow_html=True)
-    
-    new_player = st.text_input("Name:")
-    skill_level = st.selectbox("Skill Level:", ["Beginner", "Intermediate", "Advanced"])
-    
-    if st.button("Add Player", key="add_player", use_container_width=True):
-        if new_player:
-            if len(players) < 27:
-                players.append([new_player, skill_level])
-                st.success(f"{new_player} added to {day} player list!")
-            elif len(waitlist) < 20:
-                waitlist.append([new_player, skill_level])
-                st.success(f"{new_player} added to {day} waitlist!")
+    # Third column: Player Management
+    with col3:
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<h3>Add Player</h3>", unsafe_allow_html=True)
+        
+        new_player = st.text_input("Name:")
+        skill_level = st.selectbox("Skill Level:", ["Beginner", "Intermediate", "Advanced"])
+        
+        if st.button("Add Player", key="add_player", use_container_width=True):
+            if new_player:
+                if len(players) < 27:
+                    players.append([new_player, skill_level])
+                    st.success(f"{new_player} added to {day} player list!")
+                elif len(waitlist) < 20:
+                    waitlist.append([new_player, skill_level])
+                    st.success(f"{new_player} added to {day} waitlist!")
+                else:
+                    st.error(f"Sorry, both lists are full for {day}.")
+                
+                add_audit_log("Added", f"{new_player} ({skill_level}) - {day}")
+                save_data()
             else:
-                st.error(f"Sorry, both lists are full for {day}.")
-            
-            add_audit_log("Added", f"{new_player} ({skill_level}) - {day}")
-            save_data()
-        else:
-            st.error("Please enter a name.")
-    
-    st.markdown("<h3>Remove Player</h3>", unsafe_allow_html=True)
-    
-    # Remove from player list
-    if players:
-        remove_player = st.selectbox(
-            "From player list:",
-            ["None"] + [p[0] for p in players]
-        )
-        if remove_player != "None":
-            if st.button("Remove from List", key="remove_player"):
-                player_data = next(p for p in players if p[0] == remove_player)
-                players.remove(player_data)
-                st.success(f"Removed {remove_player}")
-                add_audit_log("Removed", f"{remove_player} from {day} list")
-                save_data()
-    
-    # Remove from waitlist
-    if waitlist:
-        remove_waitlist = st.selectbox(
-            "From waitlist:",
-            ["None"] + [p[0] for p in waitlist]
-        )
-        if remove_waitlist != "None":
-            if st.button("Remove from Waitlist", key="remove_waitlist"):
-                player_data = next(p for p in waitlist if p[0] == remove_waitlist)
-                waitlist.remove(player_data)
-                st.success(f"Removed {remove_waitlist}")
-                add_audit_log("Removed", f"{remove_waitlist} from {day} waitlist")
-                save_data()
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+                st.error("Please enter a name.")
+        
+        st.markdown("<h3>Remove Player</h3>", unsafe_allow_html=True)
+        
+        # Remove from player list
+        if players:
+            remove_player = st.selectbox(
+                "From player list:",
+                ["None"] + [p[0] for p in players]
+            )
+            if remove_player != "None":
+                if st.button("Remove from List", key="remove_player"):
+                    player_data = next(p for p in players if p[0] == remove_player)
+                    players.remove(player_data)
+                    st.success(f"Removed {remove_player}")
+                    add_audit_log("Removed", f"{remove_player} from {day} list")
+                    save_data()
+        
+        # Remove from waitlist
+        if waitlist:
+            remove_waitlist = st.selectbox(
+                "From waitlist:",
+                ["None"] + [p[0] for p in waitlist]
+            )
+            if remove_waitlist != "None":
+                if st.button("Remove from Waitlist", key="remove_waitlist"):
+                    player_data = next(p for p in waitlist if p[0] == remove_waitlist)
+                    waitlist.remove(player_data)
+                    st.success(f"Removed {remove_waitlist}")
+                    add_audit_log("Removed", f"{remove_waitlist} from {day} waitlist")
+                    save_data()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # Court Layout Page
 elif page == "Court Layout":
