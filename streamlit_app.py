@@ -964,7 +964,7 @@ elif page == "Court Layout":
                     save_data()
                     add_audit_log("Reset Layout", "Layout reset to default courts", "admin")
                     st.success("🔄 Layout reset to default!")
-                    st.rerun()", unsafe_allow_html=True)
+                    st.rerun()
         
         # Court Statistics
         active_courts = [c for c in court_layout["courts"] if c.get("active", True)]
