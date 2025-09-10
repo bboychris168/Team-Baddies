@@ -42,19 +42,42 @@ def generate_court_layout_image(courts, layout_settings):
     
     # Try to use a built-in font, fallback to default
     try:
-        font_large = ImageFont.truetype("arial.ttf", 24)
-        font_medium = ImageFont.truetype("arial.ttf", 18)
-        font_small = ImageFont.truetype("arial.ttf", 14)
+        # Try common system fonts
+        import platform
+        if platform.system() == "Windows":
+            font_large = ImageFont.truetype("arial.ttf", 24)
+            font_medium = ImageFont.truetype("arial.ttf", 18)
+            font_small = ImageFont.truetype("arial.ttf", 14)
+        else:
+            font_large = ImageFont.truetype("DejaVuSans.ttf", 24)
+            font_medium = ImageFont.truetype("DejaVuSans.ttf", 18)
+            font_small = ImageFont.truetype("DejaVuSans.ttf", 14)
     except:
-        font_large = ImageFont.load_default()
-        font_medium = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        # Fallback to default font
+        try:
+            font_large = ImageFont.load_default()
+            font_medium = ImageFont.load_default()
+            font_small = ImageFont.load_default()
+        except:
+            # If all else fails, use None (PIL will use built-in font)
+            font_large = None
+            font_medium = None
+            font_small = None
     
     # Draw title
     center_name = layout_settings.get('center_name', 'Team Baddies Badminton Center')
-    title_bbox = draw.textbbox((0, 0), center_name, font=font_large)
-    title_width = title_bbox[2] - title_bbox[0]
-    draw.text(((width - title_width) // 2, 20), center_name, fill=colors['border'], font=font_large)
+    try:
+        if font_large:
+            title_bbox = draw.textbbox((0, 0), center_name, font=font_large)
+            title_width = title_bbox[2] - title_bbox[0]
+            draw.text(((width - title_width) // 2, 20), center_name, fill=colors['border'], font=font_large)
+        else:
+            # Estimate text width for centering without font
+            title_width = len(center_name) * 12  # Rough estimate
+            draw.text(((width - title_width) // 2, 20), center_name, fill=colors['border'])
+    except Exception:
+        # Simple fallback text positioning
+        draw.text((50, 20), center_name, fill=colors['border'])
     
     # Calculate court layout
     rows = layout_settings.get('rows', 3)
@@ -114,21 +137,33 @@ def generate_court_layout_image(courts, layout_settings):
                 court_name = court.get('name', f'Court {court.get("id", 1)}')
                 court_level = court.get('level', 'beginner').title()
                 
-                # Get text dimensions for centering
-                name_bbox = draw.textbbox((0, 0), court_name, font=font_medium)
-                name_width = name_bbox[2] - name_bbox[0]
-                level_bbox = draw.textbbox((0, 0), court_level, font=font_small)
-                level_width = level_bbox[2] - level_bbox[0]
-                
-                # Draw text centered
-                draw.text((x + (court_width - name_width) // 2, y + 25), 
-                         court_name, fill=colors['text'], font=font_medium)
-                draw.text((x + (court_width - level_width) // 2, y + 50), 
-                         court_level, fill=colors['text'], font=font_small)
-                
-                # Court number in corner
-                draw.text((x + 5, y + 5), str(court.get('id', '?')), 
-                         fill=colors['text'], font=font_small)
+                # Draw text with error handling
+                try:
+                    if font_medium and font_small:
+                        # Get text dimensions for centering
+                        name_bbox = draw.textbbox((0, 0), court_name, font=font_medium)
+                        name_width = name_bbox[2] - name_bbox[0]
+                        level_bbox = draw.textbbox((0, 0), court_level, font=font_small)
+                        level_width = level_bbox[2] - level_bbox[0]
+                        
+                        # Draw text centered
+                        draw.text((x + (court_width - name_width) // 2, y + 25), 
+                                 court_name, fill=colors['text'], font=font_medium)
+                        draw.text((x + (court_width - level_width) // 2, y + 50), 
+                                 court_level, fill=colors['text'], font=font_small)
+                        
+                        # Court number in corner
+                        draw.text((x + 5, y + 5), str(court.get('id', '?')), 
+                                 fill=colors['text'], font=font_small)
+                    else:
+                        # Fallback without font objects
+                        draw.text((x + 40, y + 25), court_name, fill=colors['text'])
+                        draw.text((x + 40, y + 50), court_level, fill=colors['text'])
+                        draw.text((x + 5, y + 5), str(court.get('id', '?')), fill=colors['text'])
+                except Exception:
+                    # Simple fallback positioning
+                    draw.text((x + 20, y + 30), court_name, fill=colors['text'])
+                    draw.text((x + 20, y + 50), court_level, fill=colors['text'])
                 
             else:
                 # Empty court space
@@ -158,8 +193,14 @@ def generate_court_layout_image(courts, layout_settings):
         # Draw legend color box
         draw.rectangle([legend_x, legend_y, legend_x + 30, legend_y + 20], 
                       fill=color, outline=colors['border'], width=1)
-        # Draw legend text
-        draw.text((legend_x + 40, legend_y + 3), level, fill=colors['border'], font=font_medium)
+        # Draw legend text with error handling
+        try:
+            if font_medium:
+                draw.text((legend_x + 40, legend_y + 3), level, fill=colors['border'], font=font_medium)
+            else:
+                draw.text((legend_x + 40, legend_y + 3), level, fill=colors['border'])
+        except Exception:
+            draw.text((legend_x + 40, legend_y + 3), level, fill=colors['border'])
     
     # Add statistics
     stats_y = legend_y + 40
@@ -169,9 +210,19 @@ def generate_court_layout_image(courts, layout_settings):
     advanced_count = len([c for c in active_courts if c.get('level') == 'advanced'])
     
     stats_text = f"Total Courts: {total_courts} | Beginner: {beginner_count} | Intermediate: {intermediate_count} | Advanced: {advanced_count}"
-    stats_bbox = draw.textbbox((0, 0), stats_text, font=font_small)
-    stats_width = stats_bbox[2] - stats_bbox[0]
-    draw.text(((width - stats_width) // 2, stats_y), stats_text, fill=colors['border'], font=font_small)
+    
+    try:
+        if font_small:
+            stats_bbox = draw.textbbox((0, 0), stats_text, font=font_small)
+            stats_width = stats_bbox[2] - stats_bbox[0]
+            draw.text(((width - stats_width) // 2, stats_y), stats_text, fill=colors['border'], font=font_small)
+        else:
+            # Estimate width and center
+            stats_width = len(stats_text) * 8
+            draw.text(((width - stats_width) // 2, stats_y), stats_text, fill=colors['border'])
+    except Exception:
+        # Simple positioning fallback
+        draw.text((50, stats_y), stats_text, fill=colors['border'])
     
     return img
 
@@ -576,7 +627,7 @@ if page == "Home":
         court_img = generate_court_layout_image(courts, layout_settings)
         
         # Display the image
-        st.image(court_img, caption="Current Court Layout", use_column_width=True)
+        st.image(court_img, caption="Current Court Layout", use_container_width=True)
         
         # Quick court statistics
         active_courts = [c for c in courts if c.get("active", True)]
@@ -774,6 +825,17 @@ elif page == "Court Layout":
     else:
         st.markdown("<h2 style='text-align: center; color: #0d6efd; margin-bottom: 2rem;'>🏸 Court Layout Designer</h2>", unsafe_allow_html=True)
         
+        # Ensure layout_settings exists
+        if "layout_settings" not in court_layout:
+            court_layout["layout_settings"] = {
+                "rows": 3,
+                "cols": 4,
+                "center_name": "Team Baddies Badminton Center",
+                "image_width": 1200,
+                "image_height": 800,
+                "court_style": "modern"
+            }
+        
         # Layout Settings Section
         st.markdown("### ⚙️ Layout Settings")
         with st.container():
@@ -803,7 +865,7 @@ elif page == "Court Layout":
             
             # Generate preview image
             preview_img = generate_court_layout_image(courts, layout_settings)
-            st.image(preview_img, caption="Court Layout Preview", use_column_width=True)
+            st.image(preview_img, caption="Court Layout Preview", use_container_width=True)
             
             # Download button for the image
             img_buffer = io.BytesIO()
