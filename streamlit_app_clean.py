@@ -405,10 +405,9 @@ def render_court_layout_page(courts, audit):
             with grid_cols[col]:
                 court_at_position = court_grid.get((row, col))
                 
-                st.markdown(f"**Position ({row+1}, {col+1})**")
-                
-                if court_at_position and not st.session_state.get(f"editing_{row}_{col}", False):
-                    # Display existing court in view mode
+                if court_at_position:
+                    # Display existing court
+                    st.markdown(f"**Position ({row+1}, {col+1})**")
                     st.success(f"✅ {court_at_position['name']}")
                     st.write(f"**Level:** {court_at_position['level'].title()}")
                     
@@ -430,37 +429,24 @@ def render_court_layout_page(courts, audit):
                             st.success(f"🗑️ Court removed from position ({row+1}, {col+1})")
                             st.rerun()
                 
-                else:
-                    # Show form for editing existing court or adding new court
+                # Show form for editing or adding new court
+                if st.session_state.get(f"editing_{row}_{col}", False) or not court_at_position:
+                    st.markdown(f"**Position ({row+1}, {col+1})**")
+                    
                     # Initialize form values
                     if court_at_position:
                         default_name = court_at_position['name']
                         default_level = court_at_position['level']
                     else:
-                        # Calculate the next court number based on existing courts
-                        existing_court_numbers = []
-                        for c in courts.get("courts", []):
-                            if c.get("active", True) and c.get("name", "").startswith("Court "):
-                                try:
-                                    num = int(c["name"].split("Court ")[1])
-                                    existing_court_numbers.append(num)
-                                except (IndexError, ValueError):
-                                    pass
-                        
-                        next_court_number = 1
-                        while next_court_number in existing_court_numbers:
-                            next_court_number += 1
-                        
-                        default_name = f"Court {next_court_number}"
+                        default_name = f"Court {assigned_courts + 1}"
                         default_level = "beginner"
                     
                     # Create form
                     with st.form(key=f"court_form_{row}_{col}"):
-                        court_name = st.text_input("Court Name", value=default_name, key=f"name_input_{row}_{col}")
+                        court_name = st.text_input("Court Name", value=default_name)
                         skill_level = st.selectbox("Skill Level", 
                                                  ["beginner", "intermediate", "advanced"],
-                                                 index=["beginner", "intermediate", "advanced"].index(default_level),
-                                                 key=f"level_input_{row}_{col}")
+                                                 index=["beginner", "intermediate", "advanced"].index(default_level))
                         
                         form_col1, form_col2 = st.columns(2)
                         
@@ -468,17 +454,13 @@ def render_court_layout_page(courts, audit):
                             save_clicked = st.form_submit_button("💾 Save", use_container_width=True)
                         
                         with form_col2:
-                            if court_at_position:  # Only show cancel for editing existing courts
-                                cancel_clicked = st.form_submit_button("❌ Cancel", use_container_width=True)
-                            else:
-                                # For empty positions, show a clear button instead
-                                clear_clicked = st.form_submit_button("🗑️ Clear", use_container_width=True)
+                            cancel_clicked = st.form_submit_button("❌ Cancel", use_container_width=True)
                         
                         if save_clicked:
                             if court_name.strip():
                                 # Check for duplicate names (excluding current court)
                                 existing_names = []
-                                for c in courts.get("courts", []):
+                                for c in courts["courts"]:
                                     if c.get("active", True):
                                         c_pos = c.get("position", {})
                                         if not (c_pos.get("row") == row and c_pos.get("col") == col):
@@ -488,12 +470,12 @@ def render_court_layout_page(courts, audit):
                                     st.error(f"❌ Court name '{court_name}' already exists!")
                                 else:
                                     # Remove existing court at this position
-                                    courts["courts"] = [c for c in courts.get("courts", []) 
+                                    courts["courts"] = [c for c in courts["courts"] 
                                                       if not (c.get("position", {}).get("row") == row and 
                                                              c.get("position", {}).get("col") == col)]
                                     
                                     # Add new/updated court
-                                    new_id = max([c.get("id", 0) for c in courts.get("courts", [])], default=0) + 1
+                                    new_id = max([c.get("id", 0) for c in courts["courts"]], default=0) + 1
                                     courts["courts"].append({
                                         "id": new_id,
                                         "name": court_name,
@@ -514,13 +496,9 @@ def render_court_layout_page(courts, audit):
                             else:
                                 st.error("❌ Please enter a court name!")
                         
-                        # Handle cancel/clear buttons
-                        if court_at_position and 'cancel_clicked' in locals() and cancel_clicked:
+                        if cancel_clicked:
                             if f"editing_{row}_{col}" in st.session_state:
                                 del st.session_state[f"editing_{row}_{col}"]
-                            st.rerun()
-                        elif not court_at_position and 'clear_clicked' in locals() and clear_clicked:
-                            st.info("Form cleared!")
                             st.rerun()
                 
                 st.markdown("---")
