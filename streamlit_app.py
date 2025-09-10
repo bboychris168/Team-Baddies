@@ -206,6 +206,7 @@ st.sidebar.markdown("## Navigation")
 page = st.sidebar.radio("Select Page", ["Home", "Court Layout", "Admin Panel"])
 
 # Sidebar day selection (only show on Home page)
+day = "Monday"  # Default value
 if page == "Home":
     day = st.sidebar.radio("Select a day:", ["Monday", "Tuesday", "Thursday"])
 
@@ -229,11 +230,6 @@ with st.sidebar:
 # Main content area
 st.markdown("<h1 class='header'>🏸 Team Baddies</h1>", unsafe_allow_html=True)
 
-if page == "Home":
-    # Create three columns: courts, player list, and input
-    col1, col2, col3 = st.columns([2, 2, 1])
-
-# Home Page
 if page == "Home":
     # Create three columns: courts, player list, and input
     col1, col2, col3 = st.columns([2, 2, 1])
