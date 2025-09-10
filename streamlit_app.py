@@ -333,6 +333,9 @@ def render_court_layout_page(courts, audit):
             "image_width": 1200, "image_height": 800, "court_style": "modern"
         }
     
+    # Get active courts at the beginning
+    active_courts = [c for c in courts.get("courts", []) if c.get("active", True)]
+    
     # Layout settings
     st.markdown("### ⚙️ Layout Settings")
     col1, col2, col3 = st.columns(3)
@@ -430,7 +433,6 @@ def render_court_layout_page(courts, audit):
                                 st.success(f"✅ Moved {court_to_move['name']} to position ({row}, {col})!")
                                 st.rerun()
     
-    
     # Add new court
     with st.expander("➕ Add New Court"):
         with st.form("add_court", clear_on_submit=True):
@@ -473,7 +475,6 @@ def render_court_layout_page(courts, audit):
                         st.error("❌ Please enter a court name!")
     
     # List existing courts with position controls
-    active_courts = [c for c in courts["courts"] if c.get("active", True)]
     if active_courts:
         st.markdown("#### Edit Courts & Positions")
         
