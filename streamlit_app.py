@@ -157,45 +157,114 @@ st.markdown("""
         font-size: 0.875rem;
         font-weight: 600;
     }
-    .simple-court-manager {
+    .court-layout-container {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border: 2px dashed #adb5bd;
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1rem 0;
+        min-height: 300px;
+        position: relative;
+    }
+    .court-layout-header {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding: 1rem;
+        background: rgba(13, 110, 253, 0.1);
+        border-radius: 10px;
+    }
+    .court-grid {
+        display: grid;
+        grid-template-columns: repeat(var(--grid-cols, 6), 1fr);
+        grid-template-rows: repeat(var(--grid-rows, 4), 80px);
+        gap: 0.5rem;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 10px;
+    }
+    .court-cell {
+        border: 1px dashed #dee2e6;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 80px;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    .court-cell:hover {
+        background-color: rgba(13, 110, 253, 0.1);
+        border-color: #0d6efd;
+    }
+    .court-positioned {
+        cursor: grab;
+        position: relative;
+        border-radius: 8px;
+        padding: 0.5rem;
+        text-align: center;
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .court-positioned:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        cursor: move;
+    }
+    .court-size-small {
+        font-size: 0.8rem;
+        padding: 0.3rem;
+        min-height: 50px;
+    }
+    .court-size-medium {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+        min-height: 70px;
+    }
+    .court-size-large {
+        font-size: 1.1rem;
+        padding: 0.7rem;
+        min-height: 90px;
+    }
+    .court-controls-panel {
         background: white;
         border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin: 1rem 0;
-    }
-    .court-item {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
         padding: 1rem;
-        margin: 0.5rem 0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .court-info {
+    .grid-controls {
         display: flex;
-        align-items: center;
         gap: 1rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
     }
-    .court-actions {
-        display: flex;
-        gap: 0.5rem;
-    }
-    .quick-add-court {
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
+    .empty-cell-btn {
+        background: transparent;
+        border: 2px dashed #adb5bd;
+        border-radius: 5px;
+        color: #6c757d;
         cursor: pointer;
+        width: 100%;
+        height: 100%;
+        min-height: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
         transition: all 0.3s ease;
     }
-    .quick-add-court:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+    .empty-cell-btn:hover {
+        background: rgba(13, 110, 253, 0.1);
+        border-color: #0d6efd;
+        color: #0d6efd;
     }
     .court-controls {
         background: linear-gradient(135deg, #667eea, #764ba2);
@@ -315,66 +384,309 @@ with st.sidebar:
 st.markdown("<h1 class='header'>🏸 Team Baddies</h1>", unsafe_allow_html=True)
 
 if page == "Home":
-    # Create three columns: courts, player list, and input
-    col1, col2, col3 = st.columns([2, 2, 1])
+    # Court Layout Section - Above everything else
+    st.markdown("""
+    <div class='court-layout-header'>
+        <h3 style='margin: 0; color: #0d6efd;'>🏸 Badminton Center Layout</h3>
+        <p style='margin: 0.5rem 0 0 0; color: #6c757d;'>Real-time court layout and availability</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # First column: Court Layout
-    with col1:
-        st.markdown("<div class='card'><h3>🏸 Court Layout</h3>", unsafe_allow_html=True)
-        
-        # Display courts in a simple grid with skill level colors
-        active_courts = [c for c in court_layout["courts"] if c.get("active", True)]
-        if active_courts:
-            for i in range(0, len(active_courts), 2):
-                cols = st.columns(2)
-                for j in range(2):
-                    if i + j < len(active_courts):
-                        court = active_courts[i + j]
-                        with cols[j]:
-                            # Color mapping: beginner=green, intermediate=orange, advanced=red
-                            st.markdown(
-                                f"<div class='court court-{court['level']}'>"
-                                f"<h4>{court['name']}</h4>"
-                                f"<span class='skill-{court['level']}'>{court['level'].title()}</span>"
-                                "</div>",
-                                unsafe_allow_html=True
-                            )
-        else:
-            st.info("No courts configured yet. Admin can add courts in the Court Layout page.")
-        
-        # Quick court management for admins
-        if st.session_state.admin_logged_in:
-            with st.expander("⚙️ Quick Court Management"):
-                st.markdown("**Add a new court quickly:**")
-                with st.form("quick_add_court"):
-                    col_a, col_b = st.columns(2)
-                    with col_a:
-                        quick_name = st.text_input("Court Name", placeholder="e.g., Court 7")
-                    with col_b:
-                        quick_level = st.selectbox("Level", ["beginner", "intermediate", "advanced"])
+    # Initialize session state for grid management
+    if 'grid_rows' not in st.session_state:
+        st.session_state.grid_rows = court_layout.get("layout_settings", {}).get("rows", 4)
+    if 'grid_cols' not in st.session_state:
+        st.session_state.grid_cols = court_layout.get("layout_settings", {}).get("cols", 6)
+    if 'court_size' not in st.session_state:
+        st.session_state.court_size = "medium"
+    
+    # Court Layout Controls (only for admins)
+    if st.session_state.admin_logged_in:
+        with st.expander("⚙️ Layout Controls", expanded=False):
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                new_rows = st.slider("Grid Rows", 2, 8, st.session_state.grid_rows, key="rows_slider")
+                if new_rows != st.session_state.grid_rows:
+                    st.session_state.grid_rows = new_rows
+                    court_layout["layout_settings"]["rows"] = new_rows
+            
+            with col2:
+                new_cols = st.slider("Grid Columns", 3, 10, st.session_state.grid_cols, key="cols_slider")
+                if new_cols != st.session_state.grid_cols:
+                    st.session_state.grid_cols = new_cols
+                    court_layout["layout_settings"]["cols"] = new_cols
+            
+            with col3:
+                court_size = st.selectbox("Court Size", 
+                                        ["small", "medium", "large"], 
+                                        index=["small", "medium", "large"].index(st.session_state.court_size),
+                                        key="size_selector")
+                st.session_state.court_size = court_size
+            
+            with col4:
+                if st.button("💾 Save Layout", key="save_grid_layout"):
+                    save_data()
+                    st.success("✅ Layout saved!")
+    
+    # Court Grid Layout
+    st.markdown(f"""
+    <div class='court-layout-container'>
+        <div class='court-grid' style='--grid-rows: {st.session_state.grid_rows}; --grid-cols: {st.session_state.grid_cols};'>
+    """, unsafe_allow_html=True)
+    
+    # Create grid cells
+    active_courts = [c for c in court_layout["courts"] if c.get("active", True)]
+    
+    for row in range(st.session_state.grid_rows):
+        for col in range(st.session_state.grid_cols):
+            # Find court at this position
+            court_at_position = None
+            for court in active_courts:
+                court_row = court.get("position", {}).get("row", 0)
+                court_col = court.get("position", {}).get("col", 0)
+                if court_row == row and court_col == col:
+                    court_at_position = court
+                    break
+            
+            # Create a unique container for each cell
+            cell_container = st.container()
+            with cell_container:
+                if court_at_position:
+                    # Display court
+                    court_html = f"""
+                    <div class='court-cell'>
+                        <div class='court-positioned court-{court_at_position["level"]} court-size-{st.session_state.court_size}'>
+                            <div style='font-weight: bold;'>{court_at_position["name"]}</div>
+                            <div style='font-size: 0.8em; opacity: 0.9;'>{court_at_position["level"].title()}</div>
+                        </div>
+                    </div>
+                    """
+                    st.markdown(court_html, unsafe_allow_html=True)
                     
+                    # Admin controls for moving/editing courts
+                    if st.session_state.admin_logged_in:
+                        court_col1, court_col2, court_col3 = st.columns(3)
+                        with court_col1:
+                            if st.button("⬅️", key=f"move_left_{court_at_position['id']}", help="Move left"):
+                                if col > 0:
+                                    court_at_position["position"]["col"] = col - 1
+                                    st.rerun()
+                        with court_col2:
+                            if st.button("⬆️", key=f"move_up_{court_at_position['id']}", help="Move up"):
+                                if row > 0:
+                                    court_at_position["position"]["row"] = row - 1
+                                    st.rerun()
+                        with court_col3:
+                            if st.button("➡️", key=f"move_right_{court_at_position['id']}", help="Move right"):
+                                if col < st.session_state.grid_cols - 1:
+                                    court_at_position["position"]["col"] = col + 1
+                                    st.rerun()
+                        
+                        court_col1, court_col2, court_col3 = st.columns(3)
+                        with court_col2:
+                            if st.button("⬇️", key=f"move_down_{court_at_position['id']}", help="Move down"):
+                                if row < st.session_state.grid_rows - 1:
+                                    court_at_position["position"]["row"] = row + 1
+                                    st.rerun()
+                else:
+                    # Empty cell - show add button for admins
+                    if st.session_state.admin_logged_in:
+                        empty_cell_html = f"""
+                        <div class='court-cell'>
+                            <div class='empty-cell-btn'>+</div>
+                        </div>
+                        """
+                        st.markdown(empty_cell_html, unsafe_allow_html=True)
+                        
+                        if st.button("Add Court Here", key=f"add_court_{row}_{col}", help=f"Add court at position ({row},{col})"):
+                            # Quick add form
+                            with st.form(f"quick_add_{row}_{col}"):
+                                st.markdown(f"**Add Court at Position ({row}, {col})**")
+                                new_name = st.text_input("Court Name", placeholder="e.g., Court A1")
+                                new_level = st.selectbox("Skill Level", ["beginner", "intermediate", "advanced"])
+                                
+                                col_a, col_b = st.columns(2)
+                                with col_a:
+                                    if st.form_submit_button("✅ Add"):
+                                        if new_name:
+                                            new_id = max([c.get("id", 0) for c in court_layout["courts"]], default=0) + 1
+                                            new_court = {
+                                                "id": new_id,
+                                                "name": new_name,
+                                                "level": new_level,
+                                                "position": {"row": row, "col": col},
+                                                "active": True
+                                            }
+                                            court_layout["courts"].append(new_court)
+                                            save_data()
+                                            add_audit_log("Added Court", f"Added '{new_name}' at ({row},{col})", "admin")
+                                            st.success(f"✅ {new_name} added!")
+                                            st.rerun()
+                                with col_b:
+                                    if st.form_submit_button("❌ Cancel"):
+                                        st.rerun()
+                    else:
+                        # Empty cell for non-admins
+                        st.markdown("""
+                        <div class='court-cell'>
+                            <div style='color: #adb5bd; font-size: 0.8rem;'>Empty</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+    
+    st.markdown("</div></div>", unsafe_allow_html=True)
+    
+    # Quick Court Management for Admins
+    if st.session_state.admin_logged_in:
+        with st.expander("⚡ Quick Court Management"):
+            st.markdown("**Add a new court quickly:**")
+            with st.form("home_quick_add_court"):
+                col_a, col_b, col_c = st.columns(3)
+                with col_a:
+                    quick_name = st.text_input("Court Name", placeholder="e.g., Court 7")
+                with col_b:
+                    quick_level = st.selectbox("Level", ["beginner", "intermediate", "advanced"])
+                with col_c:
                     if st.form_submit_button("➕ Add Court"):
                         if quick_name:
                             new_id = max([c.get("id", 0) for c in court_layout["courts"]], default=0) + 1
                             # Find next available position
-                            max_row = max([c.get("position", {}).get("row", 0) for c in court_layout["courts"]], default=-1)
-                            new_court = {
-                                "id": new_id,
-                                "name": quick_name,
-                                "level": quick_level,
-                                "position": {"row": max_row + 1, "col": 0},
-                                "active": True
-                            }
-                            court_layout["courts"].append(new_court)
-                            save_data()
-                            add_audit_log("Added Court", f"Quick add: {quick_name} ({quick_level})", "admin")
-                            st.success(f"✅ {quick_name} added!")
-                            st.rerun()
+                            used_positions = set()
+                            for court in active_courts:
+                                pos = court.get("position", {})
+                                used_positions.add((pos.get("row", 0), pos.get("col", 0)))
+                            
+                            # Find first available position
+                            found_position = False
+                            for r in range(st.session_state.grid_rows):
+                                for c in range(st.session_state.grid_cols):
+                                    if (r, c) not in used_positions:
+                                        new_court = {
+                                            "id": new_id,
+                                            "name": quick_name,
+                                            "level": quick_level,
+                                            "position": {"row": r, "col": c},
+                                            "active": True
+                                        }
+                                        court_layout["courts"].append(new_court)
+                                        save_data()
+                                        add_audit_log("Added Court", f"Quick add: {quick_name} ({quick_level})", "admin")
+                                        st.success(f"✅ {quick_name} added!")
+                                        found_position = True
+                                        st.rerun()
+                                        break
+                                if found_position:
+                                    break
+                            
+                            if not found_position:
+                                st.error("⚠️ No empty positions available. Increase grid size or remove a court first.")
+    
+    st.markdown("---")
+    
+    # Player Registration Section - Below court layout
+    st.markdown("### 👥 Player Registration")
+    
+    # Create two columns: player list and input
+    col1, col2 = st.columns([3, 2])
+    
+    # First column: Player Lists
+    with col1:
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown(f"<h3>Players for {day}</h3>", unsafe_allow_html=True)
         
+        players = player_list[day]["Players"]
+        waitlist = player_list[day]["Waitlist"]
+        
+        # Convert players list to DataFrame for better display
+        if players:
+            st.markdown("**Active Players:**")
+            for i, player in enumerate(players, 1):
+                skill_class = f"skill-{player[1].lower()}"
+                st.markdown(
+                    f"<div style='display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; margin: 0.25rem 0; background: #f8f9fa; border-radius: 5px;'>"
+                    f"<span><strong>{i}.</strong> {player[0]}</span>"
+                    f"<span class='{skill_class}'>{player[1]}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("No players added yet.")
+        
+        st.markdown(f"<p style='color: #28a745; font-weight: bold;'>Player Count: {len(players)}/27</p>", unsafe_allow_html=True)
+        
+        st.markdown("<h3>Waitlist</h3>", unsafe_allow_html=True)
+        if waitlist:
+            st.markdown("**Waitlisted Players:**")
+            for i, player in enumerate(waitlist, 1):
+                skill_class = f"skill-{player[1].lower()}"
+                st.markdown(
+                    f"<div style='display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; margin: 0.25rem 0; background: #fff3cd; border-radius: 5px;'>"
+                    f"<span><strong>{i}.</strong> {player[0]}</span>"
+                    f"<span class='{skill_class}'>{player[1]}</span>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+        else:
+            st.info("No players in waitlist.")
+        
+        st.markdown(f"<p style='color: #fd7e14; font-weight: bold;'>Waitlist Count: {len(waitlist)}/20</p>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # Second column: Player Lists
+    # Second column: Player Management
     with col2:
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown("<h3>Add Player</h3>", unsafe_allow_html=True)
+        
+        new_player = st.text_input("Name:")
+        skill_level = st.selectbox("Skill Level:", ["Beginner", "Intermediate", "Advanced"])
+        
+        if st.button("Add Player", key="add_player", use_container_width=True):
+            if new_player:
+                if len(players) < 27:
+                    players.append([new_player, skill_level])
+                    st.success(f"{new_player} added to {day} player list!")
+                elif len(waitlist) < 20:
+                    waitlist.append([new_player, skill_level])
+                    st.success(f"{new_player} added to {day} waitlist!")
+                else:
+                    st.error(f"Sorry, both lists are full for {day}.")
+                
+                add_audit_log("Added", f"{new_player} ({skill_level}) - {day}")
+                save_data()
+            else:
+                st.error("Please enter a name.")
+        
+        st.markdown("<h3>Remove Player</h3>", unsafe_allow_html=True)
+        
+        # Remove from player list
+        if players:
+            remove_player = st.selectbox(
+                "From player list:",
+                ["None"] + [p[0] for p in players]
+            )
+            if remove_player != "None":
+                if st.button("Remove from List", key="remove_player"):
+                    player_data = next(p for p in players if p[0] == remove_player)
+                    players.remove(player_data)
+                    st.success(f"Removed {remove_player}")
+                    add_audit_log("Removed", f"{remove_player} from {day} list")
+                    save_data()
+        
+        # Remove from waitlist
+        if waitlist:
+            remove_waitlist = st.selectbox(
+                "From waitlist:",
+                ["None"] + [p[0] for p in waitlist]
+            )
+            if remove_waitlist != "None":
+                if st.button("Remove from Waitlist", key="remove_waitlist"):
+                    player_data = next(p for p in waitlist if p[0] == remove_waitlist)
+                    waitlist.remove(player_data)
+                    st.success(f"Removed {remove_waitlist}")
+                    add_audit_log("Removed", f"{remove_waitlist} from {day} waitlist")
+                    save_data()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown(f"<h3>Players for {day}</h3>", unsafe_allow_html=True)
         
