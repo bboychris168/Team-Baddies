@@ -330,33 +330,201 @@ def render_court_layout_page(courts, audit):
     if "layout_settings" not in courts:
         courts["layout_settings"] = {
             "rows": 3, "cols": 4, "center_name": "Team Baddies Badminton Center",
-            "image_width": 1200, "image_height": 800, "court_style": "modern"
+            "total_courts": 6, "image_width": 1200, "image_height": 800
         }
     
-    # Get active courts at the beginning
-    active_courts = [c for c in courts.get("courts", []) if c.get("active", True)]
+    # Initialize courts list if needed
+    if "courts" not in courts:
+        courts["courts"] = []
     
-    # Layout settings
-    st.markdown("### ⚙️ Layout Settings")
+    # Step 1: Basic Settings
+    st.markdown("### 📊 Step 1: Basic Configuration")
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        center_name = st.text_input("Center Name", value=courts["layout_settings"].get("center_name", "Team Baddies Badminton Center"))
+        center_name = st.text_input("🏢 Center Name", 
+                                   value=courts["layout_settings"].get("center_name", "Team Baddies Badminton Center"))
         courts["layout_settings"]["center_name"] = center_name
     
     with col2:
-        rows = st.number_input("Grid Rows", min_value=2, max_value=8, value=courts["layout_settings"].get("rows", 3))
-        courts["layout_settings"]["rows"] = rows
+        total_courts = st.number_input("🏸 Total Number of Courts", 
+                                     min_value=1, max_value=50, 
+                                     value=courts["layout_settings"].get("total_courts", 6))
+        courts["layout_settings"]["total_courts"] = total_courts
     
     with col3:
-        cols = st.number_input("Grid Columns", min_value=2, max_value=10, value=courts["layout_settings"].get("cols", 4))
+        if st.button("🔄 Reset All Courts", help="This will clear all court configurations"):
+            courts["courts"] = []
+            add_audit_log(audit, "Reset Courts", "All courts cleared", "admin")
+            st.success("✅ All courts reset!")
+            st.rerun()
+    
+    # Step 2: Grid Layout Configuration
+    st.markdown("---")
+    st.markdown("### 🎯 Step 2: Grid Layout Configuration")
+    
+    grid_col1, grid_col2, grid_col3 = st.columns(3)
+    
+    with grid_col1:
+        rows = st.number_input("📏 Grid Rows", min_value=1, max_value=10, 
+                              value=courts["layout_settings"].get("rows", 3))
+        courts["layout_settings"]["rows"] = rows
+    
+    with grid_col2:
+        cols = st.number_input("📐 Grid Columns", min_value=1, max_value=10, 
+                              value=courts["layout_settings"].get("cols", 4))
         courts["layout_settings"]["cols"] = cols
     
+    with grid_col3:
+        max_positions = rows * cols
+        st.metric("📋 Available Positions", max_positions)
+        if total_courts > max_positions:
+            st.error(f"⚠️ {total_courts} courts won't fit in {rows}x{cols} grid!")
+    
+    # Step 3: Court Assignment Grid
+    st.markdown("---")
+    st.markdown("### 🏸 Step 3: Assign Courts to Grid Positions")
+    
+    # Create a grid for court assignment
+    court_assignments = {}
+    
+    # Get existing court assignments
+    for court in courts.get("courts", []):
+        if court.get("active", True):
+            pos = court.get("position", {})
+            row, col = pos.get("row", 0), pos.get("col", 0)
+            court_assignments[(row, col)] = {
+                "id": court.get("id"),
+                "name": court.get("name", ""),
+                "level": court.get("level", "beginner")
+            }
+    
+    # Display grid for court assignment
+    assigned_courts = 0
+    for row in range(rows):
+        st.markdown(f"**Row {row + 1}:**")
+        grid_cols = st.columns(cols)
+        
+        for col in range(cols):
+            with grid_cols[col]:
+                position_key = f"pos_{row}_{col}"
+                current_assignment = court_assignments.get((row, col), {})
+                
+                st.markdown(f"**Position ({row+1}, {col+1})**")
+                
+                # Court assignment form
+                with st.container():
+                    # Check if position is assigned
+                    is_assigned = (row, col) in court_assignments
+                    
+                    if is_assigned:
+                        assigned_courts += 1
+                        st.success(f"✅ {current_assignment['name']}")
+                        st.markdown(f"Level: **{current_assignment['level'].title()}**")
+                        
+                        # Edit/Remove buttons
+                        edit_col, remove_col = st.columns(2)
+                        with edit_col:
+                            if st.button("✏️", key=f"edit_{row}_{col}", help="Edit court"):
+                                st.session_state[f"editing_{row}_{col}"] = True
+                                st.rerun()
+                        
+                        with remove_col:
+                            if st.button("🗑️", key=f"remove_{row}_{col}", help="Remove court"):
+                                # Remove court from this position
+                                courts["courts"] = [c for c in courts.get("courts", []) 
+                                                  if not (c.get("position", {}).get("row") == row and 
+                                                         c.get("position", {}).get("col") == col)]
+                                add_audit_log(audit, "Removed Court", f"Court removed from ({row+1}, {col+1})", "admin")
+                                st.rerun()
+                    
+                    # Show edit form if in edit mode
+                    if st.session_state.get(f"editing_{row}_{col}", False) or not is_assigned:
+                        with st.form(f"court_form_{row}_{col}"):
+                            court_name = st.text_input("Court Name", 
+                                                     value=current_assignment.get("name", f"Court {assigned_courts + 1}"),
+                                                     key=f"name_{position_key}")
+                            
+                            skill_levels = ["beginner", "intermediate", "advanced"]
+                            current_level_idx = skill_levels.index(current_assignment.get("level", "beginner"))
+                            skill_level = st.selectbox("Skill Level", skill_levels, 
+                                                     index=current_level_idx,
+                                                     key=f"level_{position_key}")
+                            
+                            form_col1, form_col2 = st.columns(2)
+                            with form_col1:
+                                if st.form_submit_button("💾 Save", use_container_width=True):
+                                    if court_name.strip():
+                                        # Check if name already exists (except for current court)
+                                        existing_names = []
+                                        for c in courts.get("courts", []):
+                                            if c.get("active", True):
+                                                c_pos = c.get("position", {})
+                                                if not (c_pos.get("row") == row and c_pos.get("col") == col):
+                                                    existing_names.append(c.get("name", ""))
+                                        
+                                        if court_name in existing_names:
+                                            st.error(f"❌ Court name '{court_name}' already exists!")
+                                        else:
+                                            # Remove existing court at this position
+                                            courts["courts"] = [c for c in courts.get("courts", []) 
+                                                              if not (c.get("position", {}).get("row") == row and 
+                                                                     c.get("position", {}).get("col") == col)]
+                                            
+                                            # Add/update court
+                                            new_id = current_assignment.get("id") or max([c.get("id", 0) for c in courts.get("courts", [])], default=0) + 1
+                                            courts["courts"].append({
+                                                "id": new_id,
+                                                "name": court_name,
+                                                "level": skill_level,
+                                                "position": {"row": row, "col": col},
+                                                "active": True
+                                            })
+                                            
+                                            action = "Updated" if is_assigned else "Added"
+                                            add_audit_log(audit, f"{action} Court", f"{court_name} ({skill_level}) at ({row+1}, {col+1})", "admin")
+                                            
+                                            # Clear edit mode
+                                            if f"editing_{row}_{col}" in st.session_state:
+                                                del st.session_state[f"editing_{row}_{col}"]
+                                            
+                                            st.rerun()
+                                    else:
+                                        st.error("❌ Please enter a court name!")
+                            
+                            with form_col2:
+                                if st.form_submit_button("❌ Cancel", use_container_width=True):
+                                    if f"editing_{row}_{col}" in st.session_state:
+                                        del st.session_state[f"editing_{row}_{col}"]
+                                    st.rerun()
+                
+                st.markdown("---")
+    
+    # Summary
+    st.markdown("---")
+    st.markdown("### 📈 Configuration Summary")
+    
+    summary_col1, summary_col2, summary_col3, summary_col4 = st.columns(4)
+    
+    with summary_col1:
+        st.metric("🎯 Target Courts", total_courts)
+    
+    with summary_col2:
+        st.metric("✅ Assigned Courts", assigned_courts)
+    
+    with summary_col3:
+        remaining = total_courts - assigned_courts
+        st.metric("⏳ Remaining", remaining, delta=None if remaining == 0 else f"{remaining} to go")
+    
+    with summary_col4:
+        completion = (assigned_courts / total_courts * 100) if total_courts > 0 else 0
+        st.metric("📊 Completion", f"{completion:.0f}%")
+    
     # Generate preview
+    st.markdown("---")
     st.markdown("### 🖼️ Layout Preview")
     try:
         settings = courts.get("layout_settings", {})
-        settings["admin_mode"] = True
         court_list = courts.get("courts", [])
         
         preview_img = generate_court_image(court_list, settings)
@@ -366,214 +534,61 @@ def render_court_layout_page(courts, audit):
         img_buffer = io.BytesIO()
         preview_img.save(img_buffer, format='PNG')
         st.download_button("📥 Download Layout Image", data=img_buffer.getvalue(),
-                          file_name=f"court_layout_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png", mime="image/png")
+                          file_name=f"court_layout_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png", 
+                          mime="image/png", use_container_width=True)
     except Exception as e:
         st.error(f"Error generating preview: {str(e)}")
     
-    # Court management
-    st.markdown("---\n### 🏸 Court Management")
-    
-    # Visual grid management
-    with st.expander("🎯 Visual Court Placement"):
-        st.markdown("**Drag & Drop Style Court Management**")
-        st.markdown("Click on a position to place/move courts:")
-        
-        # Create visual grid
-        grid_data = {}
-        for court in active_courts:
-            pos = court.get("position", {"row": 0, "col": 0})
-            grid_data[(pos.get('row', 0), pos.get('col', 0))] = court
-        
-        # Court selection for placement
-        if active_courts:
-            selected_court = st.selectbox("Select court to move:", 
-                                        [f"{c['name']} (Currently at {c.get('position', {}).get('row', 0)}, {c.get('position', {}).get('col', 0)})" 
-                                         for c in active_courts], 
-                                        key="move_court_select")
-            court_to_move = next(c for c in active_courts if selected_court.startswith(c['name']))
-        
-        # Display interactive grid
-        st.markdown("**Grid Layout:**")
-        for row in range(rows):
-            grid_cols = st.columns(cols)
-            for col in range(cols):
-                with grid_cols[col]:
-                    if (row, col) in grid_data:
-                        court = grid_data[(row, col)]
-                        color_map = {"beginner": "🟢", "intermediate": "🟠", "advanced": "🔴"}
-                        icon = color_map.get(court['level'], "⚪")
-                        
-                        if st.button(f"{icon}\n{court['name']}\n({row},{col})", 
-                                   key=f"grid_{row}_{col}", 
-                                   use_container_width=True,
-                                   help=f"Move {court_to_move['name'] if 'court_to_move' in locals() else 'selected court'} here"):
-                            if 'court_to_move' in locals():
-                                # Move selected court to this position
-                                old_pos = court_to_move.get('position', {})
-                                court_to_move['position'] = {"row": row, "col": col}
-                                
-                                # If there's a court here, swap positions
-                                if court['id'] != court_to_move['id']:
-                                    court['position'] = old_pos
-                                    add_audit_log(audit, "Swapped Positions", f"'{court_to_move['name']}' ↔ '{court['name']}'", "admin")
-                                    st.success(f"🔄 Swapped {court_to_move['name']} with {court['name']}!")
-                                else:
-                                    add_audit_log(audit, "Moved Court", f"'{court_to_move['name']}' to ({row}, {col})", "admin")
-                                    st.success(f"✅ {court_to_move['name']} already here!")
-                                st.rerun()
-                    else:
-                        # Empty position
-                        if st.button(f"➕\nEmpty\n({row},{col})", 
-                                   key=f"grid_empty_{row}_{col}", 
-                                   use_container_width=True,
-                                   help=f"Move {court_to_move['name'] if 'court_to_move' in locals() else 'selected court'} here"):
-                            if 'court_to_move' in locals():
-                                court_to_move['position'] = {"row": row, "col": col}
-                                add_audit_log(audit, "Moved Court", f"'{court_to_move['name']}' to ({row}, {col})", "admin")
-                                st.success(f"✅ Moved {court_to_move['name']} to position ({row}, {col})!")
-                                st.rerun()
-    
-    # Add new court
-    with st.expander("➕ Add New Court"):
-        with st.form("add_court", clear_on_submit=True):
-            col1, col2, col3 = st.columns([2, 2, 1])
-            with col1:
-                new_name = st.text_input("Court Name", placeholder="e.g., Court 7")
-            with col2:
-                new_level = st.selectbox("Skill Level", ["beginner", "intermediate", "advanced"])
-            with col3:
-                if st.form_submit_button("➕ Add", type="primary"):
-                    if new_name:
-                        active_courts = [c for c in courts["courts"] if c.get("active", True)]
-                        existing_names = [c.get("name", "") for c in active_courts]
-                        if new_name in existing_names:
-                            st.error(f"❌ Court name '{new_name}' already exists!")
-                        else:
-                            new_id = max([c.get("id", 0) for c in courts["courts"]], default=0) + 1
-                            # Find next available position
-                            used_positions = {(c.get("position", {}).get("row", 0), c.get("position", {}).get("col", 0)) 
-                                            for c in active_courts}
-                            
-                            found = False
-                            for r in range(rows):
-                                for c in range(cols):
-                                    if (r, c) not in used_positions:
-                                        courts["courts"].append({
-                                            "id": new_id, "name": new_name, "level": new_level,
-                                            "position": {"row": r, "col": c}, "active": True
-                                        })
-                                        add_audit_log(audit, "Added Court", f"{new_name} ({new_level})", "admin")
-                                        st.success(f"✅ {new_name} added!")
-                                        found = True
-                                        st.rerun()
-                                        break
-                                if found:
-                                    break
-                            if not found:
-                                st.error("⚠️ No empty positions available.")
-                    else:
-                        st.error("❌ Please enter a court name!")
-    
-    # List existing courts with position controls
-    if active_courts:
-        st.markdown("#### Edit Courts & Positions")
-        
-        # Show current grid layout for reference
-        with st.expander("🗺️ Current Grid Layout"):
-            grid_preview = {}
-            for court in active_courts:
-                pos = court.get("position", {"row": 0, "col": 0})
-                grid_preview[(pos.get('row', 0), pos.get('col', 0))] = court['name']
-            
-            st.markdown("**Current Positions:**")
-            for row in range(rows):
-                cols_display = []
-                for col in range(cols):
-                    if (row, col) in grid_preview:
-                        cols_display.append(f"**{grid_preview[(row, col)]}**")
-                    else:
-                        cols_display.append("_Empty_")
-                st.markdown(f"Row {row}: " + " | ".join(cols_display))
-        
-        # Court editing with position controls
-        for court in active_courts:
-            with st.expander(f"⚙️ Edit {court['name']}"):
-                edit_cols = st.columns([2, 2, 1, 1, 2])
-                
-                with edit_cols[0]:
-                    new_name = st.text_input("Court Name", value=court["name"], key=f"name_{court['id']}")
-                    if new_name != court["name"]:
-                        court["name"] = new_name
-                
-                with edit_cols[1]:
-                    levels = ["beginner", "intermediate", "advanced"]
-                    new_level = st.selectbox("Skill Level", levels, index=levels.index(court["level"]), key=f"level_{court['id']}")
-                    if new_level != court["level"]:
-                        court["level"] = new_level
-                
-                with edit_cols[2]:
-                    current_pos = court.get("position", {"row": 0, "col": 0})
-                    new_row = st.number_input("Row", min_value=0, max_value=rows-1, value=current_pos.get('row', 0), key=f"row_{court['id']}")
-                
-                with edit_cols[3]:
-                    new_col = st.number_input("Col", min_value=0, max_value=cols-1, value=current_pos.get('col', 0), key=f"col_{court['id']}")
-                
-                with edit_cols[4]:
-                    action_cols = st.columns(2)
-                    with action_cols[0]:
-                        if st.button("💾 Save", key=f"save_{court['id']}", use_container_width=True):
-                            # Check if new position conflicts with other courts
-                            other_courts = [c for c in active_courts if c['id'] != court['id']]
-                            conflict = any(
-                                c.get('position', {}).get('row', 0) == new_row and 
-                                c.get('position', {}).get('col', 0) == new_col 
-                                for c in other_courts
-                            )
-                            
-                            if conflict:
-                                st.error(f"❌ Position ({new_row}, {new_col}) is already occupied!")
-                            else:
-                                court["position"] = {"row": new_row, "col": new_col}
-                                add_audit_log(audit, "Updated Court", f"'{court['name']}' moved to ({new_row}, {new_col})", "admin")
-                                st.success(f"✅ {court['name']} updated!")
-                                st.rerun()
-                    
-                    with action_cols[1]:
-                        if st.button("🗑️ Delete", key=f"delete_{court['id']}", use_container_width=True):
-                            court['active'] = False
-                            add_audit_log(audit, "Deleted Court", f"'{court['name']}' removed", "admin")
-                            st.success(f"🗑️ {court['name']} deleted!")
-                            st.rerun()
-        
-        # Quick position swap tool
+    # Quick actions
+    if assigned_courts > 0:
         st.markdown("---")
-        st.markdown("#### 🔄 Quick Position Swap")
-        if len(active_courts) >= 2:
-            swap_cols = st.columns([3, 3, 1])
-            with swap_cols[0]:
-                court1 = st.selectbox("Court 1", [c['name'] for c in active_courts], key="swap_court1")
-            with swap_cols[1]:
-                court2 = st.selectbox("Court 2", [c['name'] for c in active_courts], key="swap_court2")
-            with swap_cols[2]:
-                if st.button("🔄 Swap", use_container_width=True):
-                    if court1 != court2:
-                        c1 = next(c for c in active_courts if c['name'] == court1)
-                        c2 = next(c for c in active_courts if c['name'] == court2)
-                        
-                        # Swap positions
-                        pos1 = c1.get('position', {"row": 0, "col": 0}).copy()
-                        pos2 = c2.get('position', {"row": 0, "col": 0}).copy()
-                        
-                        c1['position'] = pos2
-                        c2['position'] = pos1
-                        
-                        add_audit_log(audit, "Swapped Positions", f"'{court1}' ↔ '{court2}'", "admin")
-                        st.success(f"🔄 Swapped {court1} and {court2}!")
-                        st.rerun()
-                    else:
-                        st.error("❌ Please select different courts!")
-    else:
-        st.info("🏸 No courts configured yet.")
+        st.markdown("### ⚡ Quick Actions")
+        
+        quick_col1, quick_col2, quick_col3 = st.columns(3)
+        
+        with quick_col1:
+            if st.button("🎲 Auto-Fill Empty Positions", use_container_width=True):
+                # Auto-fill remaining positions
+                filled = 0
+                for row in range(rows):
+                    for col in range(cols):
+                        if (row, col) not in court_assignments and assigned_courts + filled < total_courts:
+                            filled += 1
+                            new_id = max([c.get("id", 0) for c in courts.get("courts", [])], default=0) + 1
+                            courts["courts"].append({
+                                "id": new_id,
+                                "name": f"Court {assigned_courts + filled}",
+                                "level": ["beginner", "intermediate", "advanced"][filled % 3],
+                                "position": {"row": row, "col": col},
+                                "active": True
+                            })
+                
+                if filled > 0:
+                    add_audit_log(audit, "Auto-filled Courts", f"{filled} courts auto-generated", "admin")
+                    st.success(f"✅ Auto-filled {filled} courts!")
+                    st.rerun()
+                else:
+                    st.info("ℹ️ No empty positions to fill!")
+        
+        with quick_col2:
+            if st.button("📋 Export Configuration", use_container_width=True):
+                config_data = {
+                    "center_name": center_name,
+                    "grid": {"rows": rows, "cols": cols},
+                    "courts": courts.get("courts", [])
+                }
+                st.download_button("📄 Download JSON", 
+                                 data=json.dumps(config_data, indent=2),
+                                 file_name=f"court_config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                                 mime="application/json")
+        
+        with quick_col3:
+            if st.button("✅ Finalize Layout", use_container_width=True):
+                if assigned_courts == total_courts:
+                    st.success("🎉 Layout is complete and ready!")
+                    add_audit_log(audit, "Layout Finalized", f"{total_courts} courts configured", "admin")
+                else:
+                    st.warning(f"⚠️ {total_courts - assigned_courts} courts still need to be assigned!")
 
 def render_admin_panel(players, courts, audit):
     """Render admin panel"""
