@@ -85,13 +85,13 @@ def generate_court_image(courts, settings):
     # Load fonts with fallback
     try:
         if platform.system() == "Windows":
-            font_lg = ImageFont.truetype("arial.ttf", 24)
-            font_md = ImageFont.truetype("arial.ttf", 18)
-            font_sm = ImageFont.truetype("arial.ttf", 14)
+            font_lg = ImageFont.truetype("arial.ttf", 28)
+            font_md = ImageFont.truetype("arial.ttf", 20)
+            font_sm = ImageFont.truetype("arial.ttf", 16)
         else:
-            font_lg = ImageFont.truetype("DejaVuSans.ttf", 24)
-            font_md = ImageFont.truetype("DejaVuSans.ttf", 18)
-            font_sm = ImageFont.truetype("DejaVuSans.ttf", 14)
+            font_lg = ImageFont.truetype("DejaVuSans.ttf", 28)
+            font_md = ImageFont.truetype("DejaVuSans.ttf", 20)
+            font_sm = ImageFont.truetype("DejaVuSans.ttf", 16)
     except:
         font_lg = font_md = font_sm = None
     
@@ -101,17 +101,18 @@ def generate_court_image(courts, settings):
         if font_lg:
             bbox = draw.textbbox((0, 0), title, font=font_lg)
             x = (width - (bbox[2] - bbox[0])) // 2
-            draw.text((x, 20), title, fill=colors['border'], font=font_lg)
+            draw.text((x, 15), title, fill=colors['border'], font=font_lg)
         else:
-            draw.text((width//2 - len(title)*6, 20), title, fill=colors['border'])
+            draw.text((width//2 - len(title)*6, 15), title, fill=colors['border'])
     except:
-        draw.text((50, 20), title, fill=colors['border'])
+        draw.text((50, 15), title, fill=colors['border'])
     
-    # Court layout
+    # Court layout - more compact spacing
     rows, cols = settings.get('rows', 3), settings.get('cols', 4)
     court_w, court_h = 160, 100
-    margin_x = (width - (cols * court_w + (cols-1) * 20)) // 2
-    margin_y = 80
+    spacing_x, spacing_y = 15, 15  # Reduced spacing
+    margin_x = (width - (cols * court_w + (cols-1) * spacing_x)) // 2
+    margin_y = 70  # Reduced top margin
     
     active_courts = [c for c in courts if c.get("active", True)]
     court_positions = {(c.get('position', {}).get('row', 0), c.get('position', {}).get('col', 0)): c 
@@ -120,75 +121,74 @@ def generate_court_image(courts, settings):
     # Draw courts
     for row in range(rows):
         for col in range(cols):
-            x = margin_x + col * (court_w + 20)
-            y = margin_y + row * (court_h + 30)
+            x = margin_x + col * (court_w + spacing_x)
+            y = margin_y + row * (court_h + spacing_y)
             
             if (row, col) in court_positions:
                 court = court_positions[(row, col)]
                 color = colors[court['level']]
                 
-                # Draw court rectangle
-                draw.rectangle([x, y, x + court_w, y + court_h], fill=color, outline=colors['border'], width=3)
+                # Draw clean court rectangle (no lines inside)
+                draw.rectangle([x, y, x + court_w, y + court_h], fill=color, outline=colors['border'], width=2)
                 
-                # Draw badminton lines
-                net_y = y + court_h // 2
-                draw.line([x + 10, net_y, x + court_w - 10, net_y], fill=colors['text'], width=2)
-                draw.line([x + 20, y + court_h * 0.3, x + court_w - 20, y + court_h * 0.3], fill=colors['text'], width=1)
-                draw.line([x + 20, y + court_h * 0.7, x + court_w - 20, y + court_h * 0.7], fill=colors['text'], width=1)
-                draw.line([x + court_w // 2, y + 10, x + court_w // 2, y + court_h - 10], fill=colors['text'], width=1)
-                
-                # Draw text
+                # Draw compact centered text
                 name = court.get('name', f'Court {court.get("id", 1)}')
                 level = court.get('level', 'beginner').title()
                 
                 try:
                     if font_md and font_sm:
+                        # Center the text more compactly
                         name_bbox = draw.textbbox((0, 0), name, font=font_md)
                         level_bbox = draw.textbbox((0, 0), level, font=font_sm)
-                        draw.text((x + (court_w - (name_bbox[2] - name_bbox[0])) // 2, y + 25), name, fill=colors['text'], font=font_md)
-                        draw.text((x + (court_w - (level_bbox[2] - level_bbox[0])) // 2, y + 50), level, fill=colors['text'], font=font_sm)
-                        draw.text((x + 5, y + 5), str(court.get('id', '?')), fill=colors['text'], font=font_sm)
+                        
+                        name_x = x + (court_w - (name_bbox[2] - name_bbox[0])) // 2
+                        level_x = x + (court_w - (level_bbox[2] - level_bbox[0])) // 2
+                        
+                        # More compact vertical spacing
+                        draw.text((name_x, y + 30), name, fill=colors['text'], font=font_md)
+                        draw.text((level_x, y + 55), level, fill=colors['text'], font=font_sm)
                     else:
-                        draw.text((x + 40, y + 25), name, fill=colors['text'])
-                        draw.text((x + 40, y + 50), level, fill=colors['text'])
-                        draw.text((x + 5, y + 5), str(court.get('id', '?')), fill=colors['text'])
+                        # Fallback with more compact positioning
+                        draw.text((x + court_w//2 - len(name)*4, y + 30), name, fill=colors['text'])
+                        draw.text((x + court_w//2 - len(level)*3, y + 55), level, fill=colors['text'])
                 except:
-                    draw.text((x + 20, y + 30), name, fill=colors['text'])
-                    draw.text((x + 20, y + 50), level, fill=colors['text'])
+                    draw.text((x + court_w//2 - len(name)*4, y + 35), name, fill=colors['text'])
+                    draw.text((x + court_w//2 - len(level)*3, y + 55), level, fill=colors['text'])
             else:
                 # Empty space
                 draw.rectangle([x, y, x + court_w, y + court_h], fill='#e9ecef', outline='#adb5bd', width=1)
                 if settings.get('admin_mode'):
-                    draw.line([x + court_w//2 - 20, y + court_h//2, x + court_w//2 + 20, y + court_h//2], fill='#6c757d', width=3)
-                    draw.line([x + court_w//2, y + court_h//2 - 20, x + court_w//2, y + court_h//2 + 20], fill='#6c757d', width=3)
+                    # Plus icon for empty slots
+                    draw.line([x + court_w//2 - 15, y + court_h//2, x + court_w//2 + 15, y + court_h//2], fill='#6c757d', width=2)
+                    draw.line([x + court_w//2, y + court_h//2 - 15, x + court_w//2, y + court_h//2 + 15], fill='#6c757d', width=2)
     
-    # Legend
-    legend_y = height - 120
+    # Compact legend
+    legend_y = height - 100  # Moved up for more compact layout
     legend_items = [('Beginner', colors['beginner']), ('Intermediate', colors['intermediate']), ('Advanced', colors['advanced'])]
     
     for i, (level, color) in enumerate(legend_items):
-        x = 50 + i * 200
-        draw.rectangle([x, legend_y, x + 30, legend_y + 20], fill=color, outline=colors['border'], width=1)
+        x = 80 + i * 160  # More compact spacing
+        draw.rectangle([x, legend_y, x + 25, legend_y + 18], fill=color, outline=colors['border'], width=1)
         try:
-            if font_md:
-                draw.text((x + 40, legend_y + 3), level, fill=colors['border'], font=font_md)
+            if font_sm:
+                draw.text((x + 35, legend_y + 2), level, fill=colors['border'], font=font_sm)
             else:
-                draw.text((x + 40, legend_y + 3), level, fill=colors['border'])
+                draw.text((x + 35, legend_y + 2), level, fill=colors['border'])
         except:
-            draw.text((x + 40, legend_y + 3), level, fill=colors['border'])
+            draw.text((x + 35, legend_y + 2), level, fill=colors['border'])
     
-    # Statistics
+    # Compact statistics
     stats = f"Total: {len(active_courts)} | " + " | ".join([f"{level.title()}: {len([c for c in active_courts if c.get('level') == level])}" 
                                                            for level in ['beginner', 'intermediate', 'advanced']])
     try:
         if font_sm:
             bbox = draw.textbbox((0, 0), stats, font=font_sm)
             x = (width - (bbox[2] - bbox[0])) // 2
-            draw.text((x, legend_y + 40), stats, fill=colors['border'], font=font_sm)
+            draw.text((x, legend_y + 30), stats, fill=colors['border'], font=font_sm)
         else:
-            draw.text((width//2 - len(stats)*4, legend_y + 40), stats, fill=colors['border'])
+            draw.text((width//2 - len(stats)*4, legend_y + 30), stats, fill=colors['border'])
     except:
-        draw.text((50, legend_y + 40), stats, fill=colors['border'])
+        draw.text((50, legend_y + 30), stats, fill=colors['border'])
     
     return img
 
@@ -370,6 +370,67 @@ def render_court_layout_page(courts, audit):
     # Court management
     st.markdown("---\n### 🏸 Court Management")
     
+    # Visual grid management
+    with st.expander("🎯 Visual Court Placement"):
+        st.markdown("**Drag & Drop Style Court Management**")
+        st.markdown("Click on a position to place/move courts:")
+        
+        # Create visual grid
+        grid_data = {}
+        for court in active_courts:
+            pos = court.get("position", {"row": 0, "col": 0})
+            grid_data[(pos.get('row', 0), pos.get('col', 0))] = court
+        
+        # Court selection for placement
+        if active_courts:
+            selected_court = st.selectbox("Select court to move:", 
+                                        [f"{c['name']} (Currently at {c.get('position', {}).get('row', 0)}, {c.get('position', {}).get('col', 0)})" 
+                                         for c in active_courts], 
+                                        key="move_court_select")
+            court_to_move = next(c for c in active_courts if selected_court.startswith(c['name']))
+        
+        # Display interactive grid
+        st.markdown("**Grid Layout:**")
+        for row in range(rows):
+            grid_cols = st.columns(cols)
+            for col in range(cols):
+                with grid_cols[col]:
+                    if (row, col) in grid_data:
+                        court = grid_data[(row, col)]
+                        color_map = {"beginner": "🟢", "intermediate": "🟠", "advanced": "🔴"}
+                        icon = color_map.get(court['level'], "⚪")
+                        
+                        if st.button(f"{icon}\n{court['name']}\n({row},{col})", 
+                                   key=f"grid_{row}_{col}", 
+                                   use_container_width=True,
+                                   help=f"Move {court_to_move['name'] if 'court_to_move' in locals() else 'selected court'} here"):
+                            if 'court_to_move' in locals():
+                                # Move selected court to this position
+                                old_pos = court_to_move.get('position', {})
+                                court_to_move['position'] = {"row": row, "col": col}
+                                
+                                # If there's a court here, swap positions
+                                if court['id'] != court_to_move['id']:
+                                    court['position'] = old_pos
+                                    add_audit_log(audit, "Swapped Positions", f"'{court_to_move['name']}' ↔ '{court['name']}'", "admin")
+                                    st.success(f"🔄 Swapped {court_to_move['name']} with {court['name']}!")
+                                else:
+                                    add_audit_log(audit, "Moved Court", f"'{court_to_move['name']}' to ({row}, {col})", "admin")
+                                    st.success(f"✅ {court_to_move['name']} already here!")
+                                st.rerun()
+                    else:
+                        # Empty position
+                        if st.button(f"➕\nEmpty\n({row},{col})", 
+                                   key=f"grid_empty_{row}_{col}", 
+                                   use_container_width=True,
+                                   help=f"Move {court_to_move['name'] if 'court_to_move' in locals() else 'selected court'} here"):
+                            if 'court_to_move' in locals():
+                                court_to_move['position'] = {"row": row, "col": col}
+                                add_audit_log(audit, "Moved Court", f"'{court_to_move['name']}' to ({row}, {col})", "admin")
+                                st.success(f"✅ Moved {court_to_move['name']} to position ({row}, {col})!")
+                                st.rerun()
+    
+    
     # Add new court
     with st.expander("➕ Add New Court"):
         with st.form("add_court", clear_on_submit=True):
@@ -411,42 +472,105 @@ def render_court_layout_page(courts, audit):
                     else:
                         st.error("❌ Please enter a court name!")
     
-    # List existing courts
+    # List existing courts with position controls
     active_courts = [c for c in courts["courts"] if c.get("active", True)]
     if active_courts:
-        st.markdown("#### Edit Courts")
-        for court in active_courts:
-            cols = st.columns([3, 2, 2, 1, 1])
-            
-            with cols[0]:
-                new_name = st.text_input("Name", value=court["name"], key=f"name_{court['id']}")
-                if new_name != court["name"]:
-                    court["name"] = new_name
-            
-            with cols[1]:
-                levels = ["beginner", "intermediate", "advanced"]
-                new_level = st.selectbox("Level", levels, index=levels.index(court["level"]), key=f"level_{court['id']}")
-                if new_level != court["level"]:
-                    court["level"] = new_level
-            
-            with cols[2]:
+        st.markdown("#### Edit Courts & Positions")
+        
+        # Show current grid layout for reference
+        with st.expander("🗺️ Current Grid Layout"):
+            grid_preview = {}
+            for court in active_courts:
                 pos = court.get("position", {"row": 0, "col": 0})
-                st.text(f"Position: ({pos.get('row', 0)}, {pos.get('col', 0)})")
+                grid_preview[(pos.get('row', 0), pos.get('col', 0))] = court['name']
             
-            with cols[3]:
-                if st.button("💾", key=f"save_{court['id']}", help="Save"):
-                    add_audit_log(audit, "Updated Court", f"'{court['name']}' updated", "admin")
-                    st.success(f"✅ {court['name']} updated!")
-                    st.rerun()
-            
-            with cols[4]:
-                if st.button("🗑️", key=f"delete_{court['id']}", help="Delete"):
-                    court['active'] = False
-                    add_audit_log(audit, "Deleted Court", f"'{court['name']}' removed", "admin")
-                    st.success(f"🗑️ {court['name']} deleted!")
-                    st.rerun()
-            
-            st.markdown("---")
+            st.markdown("**Current Positions:**")
+            for row in range(rows):
+                cols_display = []
+                for col in range(cols):
+                    if (row, col) in grid_preview:
+                        cols_display.append(f"**{grid_preview[(row, col)]}**")
+                    else:
+                        cols_display.append("_Empty_")
+                st.markdown(f"Row {row}: " + " | ".join(cols_display))
+        
+        # Court editing with position controls
+        for court in active_courts:
+            with st.expander(f"⚙️ Edit {court['name']}"):
+                edit_cols = st.columns([2, 2, 1, 1, 2])
+                
+                with edit_cols[0]:
+                    new_name = st.text_input("Court Name", value=court["name"], key=f"name_{court['id']}")
+                    if new_name != court["name"]:
+                        court["name"] = new_name
+                
+                with edit_cols[1]:
+                    levels = ["beginner", "intermediate", "advanced"]
+                    new_level = st.selectbox("Skill Level", levels, index=levels.index(court["level"]), key=f"level_{court['id']}")
+                    if new_level != court["level"]:
+                        court["level"] = new_level
+                
+                with edit_cols[2]:
+                    current_pos = court.get("position", {"row": 0, "col": 0})
+                    new_row = st.number_input("Row", min_value=0, max_value=rows-1, value=current_pos.get('row', 0), key=f"row_{court['id']}")
+                
+                with edit_cols[3]:
+                    new_col = st.number_input("Col", min_value=0, max_value=cols-1, value=current_pos.get('col', 0), key=f"col_{court['id']}")
+                
+                with edit_cols[4]:
+                    action_cols = st.columns(2)
+                    with action_cols[0]:
+                        if st.button("💾 Save", key=f"save_{court['id']}", use_container_width=True):
+                            # Check if new position conflicts with other courts
+                            other_courts = [c for c in active_courts if c['id'] != court['id']]
+                            conflict = any(
+                                c.get('position', {}).get('row', 0) == new_row and 
+                                c.get('position', {}).get('col', 0) == new_col 
+                                for c in other_courts
+                            )
+                            
+                            if conflict:
+                                st.error(f"❌ Position ({new_row}, {new_col}) is already occupied!")
+                            else:
+                                court["position"] = {"row": new_row, "col": new_col}
+                                add_audit_log(audit, "Updated Court", f"'{court['name']}' moved to ({new_row}, {new_col})", "admin")
+                                st.success(f"✅ {court['name']} updated!")
+                                st.rerun()
+                    
+                    with action_cols[1]:
+                        if st.button("🗑️ Delete", key=f"delete_{court['id']}", use_container_width=True):
+                            court['active'] = False
+                            add_audit_log(audit, "Deleted Court", f"'{court['name']}' removed", "admin")
+                            st.success(f"🗑️ {court['name']} deleted!")
+                            st.rerun()
+        
+        # Quick position swap tool
+        st.markdown("---")
+        st.markdown("#### 🔄 Quick Position Swap")
+        if len(active_courts) >= 2:
+            swap_cols = st.columns([3, 3, 1])
+            with swap_cols[0]:
+                court1 = st.selectbox("Court 1", [c['name'] for c in active_courts], key="swap_court1")
+            with swap_cols[1]:
+                court2 = st.selectbox("Court 2", [c['name'] for c in active_courts], key="swap_court2")
+            with swap_cols[2]:
+                if st.button("🔄 Swap", use_container_width=True):
+                    if court1 != court2:
+                        c1 = next(c for c in active_courts if c['name'] == court1)
+                        c2 = next(c for c in active_courts if c['name'] == court2)
+                        
+                        # Swap positions
+                        pos1 = c1.get('position', {"row": 0, "col": 0}).copy()
+                        pos2 = c2.get('position', {"row": 0, "col": 0}).copy()
+                        
+                        c1['position'] = pos2
+                        c2['position'] = pos1
+                        
+                        add_audit_log(audit, "Swapped Positions", f"'{court1}' ↔ '{court2}'", "admin")
+                        st.success(f"🔄 Swapped {court1} and {court2}!")
+                        st.rerun()
+                    else:
+                        st.error("❌ Please select different courts!")
     else:
         st.info("🏸 No courts configured yet.")
 
