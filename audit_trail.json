@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "action": "Added",
+    "details": "chris (Beginner) - Monday",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:04:52.017789"
+  },
+  {
+    "action": "test",
+    "details": "details",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:09:38.677816"
+  },
+  {
+    "action": "Added",
+    "details": "Ray (Beginner) - Monday",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:09:55.811219"
+  },
+  {
+    "action": "Added",
+    "details": "Lena (Beginner) - Monday",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:10:05.469220"
+  },
+  {
+    "action": "Removed",
+    "details": "Lena from Monday list",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:10:10.544388"
+  },
+  {
+    "action": "Added",
+    "details": "Lena (Advanced) - Monday",
+    "user_type": "user",
+    "timestamp": "2025-10-05T01:10:14.815001"
+  }
+]

@@ -101,3 +101,4 @@ This is a clean, maintainable codebase perfect for:
 ## 📄 License
 
 MIT License - See LICENSE file for details
+
